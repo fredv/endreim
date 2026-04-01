@@ -16,6 +16,10 @@
   --red: #f87171;
   --radius: 12px;
   --radius-sm: 8px;
+
+  --font-graffiti: 'Rubik Spray Paint', 'Permanent Marker', cursive;
+  --font-marker: 'Permanent Marker', 'Patrick Hand', cursive;
+  --font-hand: 'Patrick Hand', 'Segoe UI', system-ui, sans-serif;
 }
 
 * {
@@ -25,11 +29,28 @@
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-hand);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   overflow-x: hidden;
+  /* Subtile Backsteinmauer-Textur */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 38px,
+      rgba(255, 255, 255, 0.012) 38px,
+      rgba(255, 255, 255, 0.012) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 78px,
+      rgba(255, 255, 255, 0.008) 78px,
+      rgba(255, 255, 255, 0.008) 80px
+    );
+  font-size: 1.05rem;
 }
 
 #app {
@@ -59,26 +80,71 @@ body {
 
 .logo {
   text-align: center;
-  padding: 60px 0 40px;
+  padding: 50px 0 30px;
+  position: relative;
 }
 
 .logo h1 {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: 4px;
+  font-family: var(--font-graffiti);
+  font-size: 5rem;
+  font-weight: 400;
+  letter-spacing: 6px;
   text-transform: uppercase;
+  color: var(--text);
+  position: relative;
+  display: inline-block;
+  /* Graffiti-Outline-Effekt: mehrere Textschatten */
+  text-shadow:
+    3px 3px 0px #000,
+    -1px -1px 0px #000,
+    1px -1px 0px #000,
+    -1px 1px 0px #000,
+    0 0 10px rgba(255, 77, 106, 0.3),
+    0 0 40px rgba(255, 77, 106, 0.1);
+  /* Leichte Rotation für den handgesprühten Look */
+  transform: rotate(-2deg);
 }
 
 .logo .accent {
   color: var(--accent);
-  text-shadow: 0 0 30px var(--accent-glow);
+  text-shadow:
+    3px 3px 0px #000,
+    -1px -1px 0px #000,
+    1px -1px 0px #000,
+    -1px 1px 0px #000,
+    0 0 20px var(--accent-glow),
+    0 0 60px var(--accent-glow),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Spray-Paint-Tropfen unter dem Logo */
+.logo h1::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 12px var(--accent-glow);
+  /* Tropfen-Effekt */
+  clip-path: polygon(
+    0% 0%, 5% 0%, 5% 100%, 8% 0%, 15% 0%, 15% 60%, 18% 0%,
+    30% 0%, 30% 80%, 33% 0%, 50% 0%, 50% 40%, 53% 0%,
+    70% 0%, 70% 100%, 73% 0%, 85% 0%, 85% 50%, 88% 0%,
+    95% 0%, 95% 70%, 98% 0%, 100% 0%, 100% 0%
+  );
 }
 
 .subtitle {
+  font-family: var(--font-marker);
   color: var(--text-dim);
-  font-size: 1.1rem;
-  margin-top: 8px;
-  letter-spacing: 2px;
+  font-size: 1.15rem;
+  margin-top: 18px;
+  letter-spacing: 3px;
+  transform: rotate(1deg);
 }
 
 .menu-box {
@@ -95,23 +161,25 @@ body {
 
 .setting label {
   display: block;
+  font-family: var(--font-marker);
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   margin-bottom: 10px;
 }
 
 /* === BUTTONS === */
 
 .btn {
+  font-family: var(--font-hand);
   background: var(--bg-input);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 10px 18px;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 1rem;
   transition: all 0.2s ease;
 }
 
@@ -128,14 +196,17 @@ body {
 
 .btn-sm {
   padding: 8px 14px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .btn-primary {
+  font-family: var(--font-marker);
   background: var(--accent);
   border-color: var(--accent);
   color: white;
-  font-weight: 600;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .btn-primary:hover {
@@ -146,7 +217,7 @@ body {
 .btn-large {
   width: 100%;
   padding: 16px;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   margin-top: 10px;
 }
 
@@ -182,11 +253,12 @@ body {
 }
 
 .how-to-play h3 {
+  font-family: var(--font-marker);
   color: var(--accent);
-  font-size: 1rem;
+  font-size: 1.2rem;
   margin-bottom: 12px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 .how-to-play ul {
@@ -225,7 +297,8 @@ body {
 
 .stat-label {
   display: block;
-  font-size: 0.75rem;
+  font-family: var(--font-marker);
+  font-size: 0.8rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -233,8 +306,9 @@ body {
 
 .stat-value {
   display: block;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-family: var(--font-marker);
+  font-size: 1.5rem;
+  font-weight: 400;
   margin-top: 4px;
 }
 
@@ -250,15 +324,18 @@ body {
 
 .challenge-badge {
   display: inline-block;
+  font-family: var(--font-marker);
   background: var(--accent);
   color: white;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  padding: 6px 16px;
+  border-radius: 2px;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   margin-bottom: 8px;
+  transform: rotate(-1deg);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.4);
 }
 
 .challenge-difficulty {
@@ -268,37 +345,48 @@ body {
 }
 
 .challenge-line {
-  font-size: 1.35rem;
-  font-weight: 600;
-  line-height: 1.6;
-  padding: 28px 20px;
+  font-family: var(--font-marker);
+  font-size: 1.4rem;
+  font-weight: 400;
+  line-height: 1.7;
+  padding: 28px 24px;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  border-radius: 4px;
   margin-bottom: 24px;
-  font-style: italic;
+  font-style: normal;
   position: relative;
+  transform: rotate(-0.5deg);
+  /* Notizbuch-Linien-Effekt */
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 31px,
+    rgba(255, 255, 255, 0.03) 31px,
+    rgba(255, 255, 255, 0.03) 32px
+  );
 }
 
 .challenge-line::before {
   content: '«';
   position: absolute;
-  top: 10px;
-  left: 14px;
-  font-size: 2rem;
+  top: 8px;
+  left: 10px;
+  font-size: 2.2rem;
+  font-family: var(--font-graffiti);
   color: var(--accent);
-  opacity: 0.4;
+  opacity: 0.35;
   font-style: normal;
 }
 
 .challenge-line::after {
   content: '»';
   position: absolute;
-  bottom: 6px;
-  right: 14px;
-  font-size: 2rem;
+  bottom: 4px;
+  right: 10px;
+  font-size: 2.2rem;
+  font-family: var(--font-graffiti);
   color: var(--accent);
-  opacity: 0.4;
+  opacity: 0.35;
   font-style: normal;
 }
 
@@ -317,13 +405,20 @@ body {
   width: 100%;
   background: var(--bg-input);
   border: 2px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 4px;
   color: var(--text);
-  font-size: 1.1rem;
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
   padding: 16px;
   resize: none;
-  font-family: inherit;
   transition: border-color 0.2s;
+  /* Notizbuch-Linien */
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 29px,
+    rgba(255, 255, 255, 0.03) 29px,
+    rgba(255, 255, 255, 0.03) 30px
+  );
 }
 
 #player-input:focus {
@@ -411,14 +506,16 @@ body {
 }
 
 .result-score-number {
-  font-size: 2.2rem;
-  font-weight: 900;
+  font-family: var(--font-graffiti);
+  font-size: 2.6rem;
+  font-weight: 400;
 }
 
 .result-label {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 2px;
+  font-family: var(--font-marker);
+  font-size: 1.3rem;
+  font-weight: 400;
+  letter-spacing: 3px;
   margin-bottom: 8px;
 }
 
@@ -441,21 +538,23 @@ body {
 }
 
 .rhyme-line-label {
-  font-size: 0.7rem;
+  font-family: var(--font-marker);
+  font-size: 0.8rem;
   color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   margin-bottom: 4px;
 }
 
 .rhyme-line {
-  font-size: 1.05rem;
+  font-family: var(--font-hand);
+  font-size: 1.1rem;
   line-height: 1.7;
   padding: 10px 14px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-style: italic;
+  border-radius: 4px;
+  font-style: normal;
 }
 
 /* Reim-Qualitäts-Farben */
@@ -564,10 +663,11 @@ body {
 }
 
 .example-section h4 {
+  font-family: var(--font-marker);
   color: var(--text-dim);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   margin-bottom: 10px;
 }
 
@@ -619,8 +719,14 @@ body {
 }
 
 .end-content h2 {
-  font-size: 1.8rem;
+  font-family: var(--font-graffiti);
+  font-size: 2.8rem;
+  font-weight: 400;
   margin-bottom: 20px;
+  text-shadow:
+    2px 2px 0px #000,
+    0 0 10px rgba(255, 77, 106, 0.2);
+  transform: rotate(-1deg);
 }
 
 .rank-display {
@@ -629,31 +735,44 @@ body {
 
 .rank-label {
   display: block;
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
-
-.rank-title {
-  font-size: 2rem;
-  font-weight: 900;
-  color: var(--gold);
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-}
-
-.final-score {
-  font-size: 4rem;
-  font-weight: 900;
-  color: var(--accent);
-}
-
-.final-score-label {
+  font-family: var(--font-marker);
   color: var(--text-dim);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.rank-title {
+  font-family: var(--font-graffiti);
+  font-size: 2.8rem;
+  font-weight: 400;
+  color: var(--gold);
+  text-shadow:
+    2px 2px 0px #000,
+    -1px -1px 0px #000,
+    0 0 20px rgba(255, 215, 0, 0.3),
+    0 0 50px rgba(255, 215, 0, 0.15);
+  transform: rotate(-1.5deg);
+  display: inline-block;
+}
+
+.final-score {
+  font-family: var(--font-graffiti);
+  font-size: 5rem;
+  font-weight: 400;
+  color: var(--accent);
+  text-shadow:
+    3px 3px 0px #000,
+    0 0 20px var(--accent-glow);
+}
+
+.final-score-label {
+  font-family: var(--font-marker);
+  color: var(--text-dim);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
   margin-bottom: 30px;
 }
 
@@ -670,14 +789,16 @@ body {
 
 .end-stat-value {
   display: block;
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-family: var(--font-marker);
+  font-size: 1.8rem;
+  font-weight: 400;
   color: var(--blue);
 }
 
 .end-stat-label {
   display: block;
-  font-size: 0.75rem;
+  font-family: var(--font-hand);
+  font-size: 0.8rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -768,11 +889,11 @@ body {
   }
 
   .logo h1 {
-    font-size: 2.5rem;
+    font-size: 3.2rem;
   }
 
   .challenge-line {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     padding: 20px 16px;
   }
 
@@ -782,5 +903,17 @@ body {
 
   .end-stats {
     gap: 16px;
+  }
+
+  .rank-title {
+    font-size: 2rem;
+  }
+
+  .final-score {
+    font-size: 3.5rem;
+  }
+
+  .end-content h2 {
+    font-size: 2rem;
   }
 }

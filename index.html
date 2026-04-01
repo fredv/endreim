@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EndReim – Das Rap-Reim-Spiel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- START SCREEN -->
+    <div id="screen-start" class="screen active">
+      <div class="logo">
+        <h1>END<span class="accent">REIM</span></h1>
+        <p class="subtitle">Trainiere deine Reimskills</p>
+      </div>
+
+      <div class="menu-box">
+        <div class="setting">
+          <label>Schwierigkeit</label>
+          <div class="btn-group" id="difficulty-select">
+            <button class="btn btn-sm active" data-value="">Gemischt</button>
+            <button class="btn btn-sm" data-value="1">Leicht</button>
+            <button class="btn btn-sm" data-value="2">Mittel</button>
+            <button class="btn btn-sm" data-value="3">Schwer</button>
+          </div>
+        </div>
+
+        <div class="setting">
+          <label>Runden</label>
+          <div class="btn-group" id="rounds-select">
+            <button class="btn btn-sm" data-value="5">5</button>
+            <button class="btn btn-sm active" data-value="10">10</button>
+            <button class="btn btn-sm" data-value="15">15</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-large" id="btn-start">Spiel starten</button>
+      </div>
+
+      <div class="how-to-play">
+        <h3>So geht's</h3>
+        <ul>
+          <li>Du bekommst eine Rap-Zeile angezeigt</li>
+          <li>Schreib eine Zeile, die sich darauf reimt</li>
+          <li>Je mehr Silben reimen, desto mehr Punkte</li>
+          <li>Saubere Reime &gt; unsaubere Reime</li>
+          <li>Wortspiele geben Bonuspunkte</li>
+          <li>Hingezweckte Reime kosten Abzug</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="screen-game" class="screen">
+      <div class="game-header">
+        <div class="stat">
+          <span class="stat-label">Runde</span>
+          <span class="stat-value" id="round-display">1/10</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Punkte</span>
+          <span class="stat-value" id="score-display">0</span>
+        </div>
+        <div class="stat streak-stat">
+          <span class="stat-label">Streak</span>
+          <span class="stat-value" id="streak-display">0</span>
+        </div>
+      </div>
+
+      <div class="challenge-area">
+        <div class="challenge-badge" id="challenge-badge">PUNCHLINE GESUCHT</div>
+        <div class="challenge-difficulty" id="challenge-difficulty"></div>
+
+        <div class="challenge-line" id="challenge-line">
+          <!-- Vorgegebene Zeile -->
+        </div>
+
+        <div class="input-area">
+          <div class="input-wrapper">
+            <textarea
+              id="player-input"
+              placeholder="Deine Zeile..."
+              rows="2"
+              maxlength="200"
+              autofocus
+            ></textarea>
+            <span class="char-count" id="char-count">0/200</span>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn btn-hint" id="btn-hint" title="Hinweis anzeigen">💡</button>
+            <button class="btn btn-primary" id="btn-submit">Abschicken</button>
+            <button class="btn btn-skip" id="btn-skip">Überspringen</button>
+          </div>
+        </div>
+
+        <div class="hint-area hidden" id="hint-area">
+          <!-- Hinweis -->
+        </div>
+      </div>
+
+      <!-- RESULT OVERLAY -->
+      <div class="result-overlay hidden" id="result-overlay">
+        <div class="result-card">
+          <div class="result-score-circle" id="result-score-circle">
+            <span class="result-score-number" id="result-score-number">0</span>
+          </div>
+          <div class="result-label" id="result-label">SOLIDE</div>
+          <div class="result-feedback" id="result-feedback"></div>
+
+          <div class="result-details">
+            <div class="detail-row">
+              <span>Reimende Silben</span>
+              <span id="result-syllables">0</span>
+            </div>
+            <div class="detail-row">
+              <span>Reimtyp</span>
+              <span id="result-type">-</span>
+            </div>
+            <div class="detail-row" id="result-wordplay-row">
+              <span>Wortspiel-Bonus</span>
+              <span id="result-wordplay">+0</span>
+            </div>
+            <div class="detail-row" id="result-natural-row">
+              <span>Natürlichkeit</span>
+              <span id="result-natural">0</span>
+            </div>
+            <div class="detail-row" id="result-streak-row">
+              <span>Streak-Multiplikator</span>
+              <span id="result-streak-mult">x1</span>
+            </div>
+            <div class="detail-row result-total">
+              <span>Rundenpunkte</span>
+              <span id="result-round-score">0</span>
+            </div>
+          </div>
+
+          <div class="example-section">
+            <h4>Beispiel-Lösungen:</h4>
+            <div id="result-examples"></div>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="btn-next">Nächste Runde</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- END SCREEN -->
+    <div id="screen-end" class="screen">
+      <div class="end-content">
+        <h2>Spiel vorbei!</h2>
+        <div class="rank-display">
+          <span class="rank-label">Dein Rang:</span>
+          <span class="rank-title" id="end-rank">Wortschmied</span>
+        </div>
+
+        <div class="final-score" id="end-score">0</div>
+        <div class="final-score-label">Punkte</div>
+
+        <div class="end-stats">
+          <div class="end-stat">
+            <span class="end-stat-value" id="end-avg">0</span>
+            <span class="end-stat-label">Ø Score</span>
+          </div>
+          <div class="end-stat">
+            <span class="end-stat-value" id="end-best-streak">0</span>
+            <span class="end-stat-label">Beste Streak</span>
+          </div>
+          <div class="end-stat">
+            <span class="end-stat-value" id="end-hints">0</span>
+            <span class="end-stat-label">Hinweise</span>
+          </div>
+        </div>
+
+        <div class="end-breakdown" id="end-breakdown">
+          <!-- Reimtyp-Aufschlüsselung -->
+        </div>
+
+        <div class="end-history" id="end-history">
+          <!-- Rundenübersicht -->
+        </div>
+
+        <button class="btn btn-primary btn-large" id="btn-restart">Nochmal spielen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="rhyme-engine.js"></script>
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

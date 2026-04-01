@@ -95,6 +95,86 @@ const RhymeEngine = (() => {
     return syllables;
   }
 
+  /**
+   * Wie splitSyllables, aber trackt die Zeichenpositionen im Originaltext.
+   * Gibt Silben mit { ..., startPos, endPos } zurück.
+   */
+  function splitSyllablesWithPositions(originalText) {
+    const cleaned = cleanLine(originalText);
+    const lower = cleaned.toLowerCase();
+    const words = lower.split(/\s+/).filter(w => w.length > 0);
+    const syllables = [];
+
+    // Finde die Position jedes Wortes im Originaltext (case-insensitive)
+    let searchFrom = 0;
+    const originalLower = originalText.toLowerCase();
+
+    for (const word of words) {
+      // Finde das Wort im Originaltext (überspringe Satzzeichen)
+      let wordStart = -1;
+      for (let i = searchFrom; i <= originalLower.length - word.length; i++) {
+        // Prüfe ob an Position i das Wort steht (nur Buchstaben vergleichen)
+        let cleanIdx = 0;
+        let matchStart = i;
+        let matchEnd = i;
+        let matched = true;
+
+        for (let j = i; j < originalText.length && cleanIdx < word.length; j++) {
+          const ch = originalLower[j];
+          if (/[.,!?;:"""''„"«»\-–—()\[\]{}]/.test(ch)) {
+            matchEnd = j + 1;
+            continue;
+          }
+          if (ch === word[cleanIdx]) {
+            if (cleanIdx === 0) matchStart = j;
+            matchEnd = j + 1;
+            cleanIdx++;
+          } else {
+            matched = false;
+            break;
+          }
+        }
+
+        if (matched && cleanIdx === word.length) {
+          wordStart = matchStart;
+          searchFrom = matchEnd;
+          break;
+        }
+      }
+
+      if (wordStart === -1) continue;
+
+      const phonetic = toPhonetic(word);
+      const wordSyllables = extractSyllablesFromPhonetic(phonetic, word);
+
+      // Weise jeder Silbe die Position im Originaltext zu
+      let charOffset = wordStart;
+      for (const syl of wordSyllables) {
+        const sylLen = syl.text.length;
+        // Finde die tatsächliche Position der Silbe im Originaltext
+        let realStart = charOffset;
+        let realEnd = charOffset;
+        let matched = 0;
+        for (let k = charOffset; k < originalText.length && matched < sylLen; k++) {
+          const ch = originalText[k].toLowerCase();
+          if (/[.,!?;:"""''„"«»\-–—()\[\]{}]/.test(ch)) {
+            realEnd = k + 1;
+            continue;
+          }
+          if (matched === 0) realStart = k;
+          realEnd = k + 1;
+          matched++;
+        }
+        syl.startPos = realStart;
+        syl.endPos = realEnd;
+        charOffset = realEnd;
+        syllables.push(syl);
+      }
+    }
+
+    return syllables;
+  }
+
   function extractSyllablesFromPhonetic(phonetic, originalWord) {
     // Vereinfachte Silbentrennung basierend auf Vokalen im Originalwort
     const vowelPositions = [];
@@ -461,14 +541,91 @@ const RhymeEngine = (() => {
     return fb;
   }
 
+  /**
+   * Erzeugt HTML mit farbig hervorgehobenen reimenden Silben für beide Zeilen.
+   * Qualitäts-Klassen: rhyme-perfect (≥0.85), rhyme-good (≥0.7), rhyme-dirty (≥0.5), rhyme-weak (≥0.3)
+   * Gibt { html1, html2, syllableScores } zurück.
+   */
+  function highlightRhyme(line1, line2) {
+    const syl1 = splitSyllablesWithPositions(line1);
+    const syl2 = splitSyllablesWithPositions(line2);
+
+    if (syl1.length === 0 || syl2.length === 0) {
+      return { html1: escapeHtmlEngine(line1), html2: escapeHtmlEngine(line2), syllableScores: [] };
+    }
+
+    // Vergleiche Silben von hinten und sammle Highlight-Infos
+    const maxCompare = Math.min(syl1.length, syl2.length);
+    const highlights1 = []; // { startPos, endPos, quality }
+    const highlights2 = [];
+    const syllableScores = [];
+
+    for (let i = 0; i < maxCompare; i++) {
+      const s1 = syl1[syl1.length - 1 - i];
+      const s2 = syl2[syl2.length - 1 - i];
+      const score = compareSyllables(s1, s2);
+
+      if (score < 0.3) {
+        if (i === 0) break; // Kein Reim
+        break; // Reim-Kette unterbrochen
+      }
+
+      const quality = score >= 0.85 ? 'perfect' : score >= 0.7 ? 'good' : score >= 0.5 ? 'dirty' : 'weak';
+
+      highlights1.push({ startPos: s1.startPos, endPos: s1.endPos, quality, score });
+      highlights2.push({ startPos: s2.startPos, endPos: s2.endPos, quality, score });
+      syllableScores.push({ syl1: s1.text, syl2: s2.text, score, quality });
+    }
+
+    // Sortiere nach Position (aufsteigend)
+    highlights1.sort((a, b) => a.startPos - b.startPos);
+    highlights2.sort((a, b) => a.startPos - b.startPos);
+
+    const html1 = buildHighlightedHtml(line1, highlights1);
+    const html2 = buildHighlightedHtml(line2, highlights2);
+
+    return { html1, html2, syllableScores };
+  }
+
+  function buildHighlightedHtml(text, highlights) {
+    if (highlights.length === 0) return escapeHtmlEngine(text);
+
+    let result = '';
+    let pos = 0;
+
+    for (const h of highlights) {
+      // Text vor dem Highlight
+      if (h.startPos > pos) {
+        result += escapeHtmlEngine(text.substring(pos, h.startPos));
+      }
+      // Highlighted text
+      const highlightedText = text.substring(h.startPos, h.endPos);
+      result += `<span class="rhyme-${h.quality}" title="Score: ${Math.round(h.score * 100)}%">${escapeHtmlEngine(highlightedText)}</span>`;
+      pos = h.endPos;
+    }
+
+    // Rest des Textes
+    if (pos < text.length) {
+      result += escapeHtmlEngine(text.substring(pos));
+    }
+
+    return result;
+  }
+
+  function escapeHtmlEngine(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   // Public API
   return {
     toPhonetic,
     splitSyllables,
+    splitSyllablesWithPositions,
     evaluateRhyme,
     evaluateWordplay,
     evaluateNaturalness,
     scoreAnswer,
+    highlightRhyme,
     cleanLine
   };
 })();

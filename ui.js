@@ -30,6 +30,11 @@
     btnSkip: document.getElementById('btn-skip'),
     hintArea: document.getElementById('hint-area'),
 
+    // Result - Rhyme Highlights
+    rhymeComparison: document.getElementById('rhyme-comparison'),
+    rhymeLine1: document.getElementById('rhyme-line-1'),
+    rhymeLine2: document.getElementById('rhyme-line-2'),
+
     // Result
     resultOverlay: document.getElementById('result-overlay'),
     resultScoreCircle: document.getElementById('result-score-circle'),
@@ -207,6 +212,16 @@
     // Label & Feedback
     els.resultLabel.textContent = scoreInfo.label;
     els.resultFeedback.textContent = result.feedback;
+
+    // Rhyme Highlights
+    if (roundResult.playerLine && result.rhyme.details.syllableMatches > 0) {
+      const highlight = RhymeEngine.highlightRhyme(challenge.line, roundResult.playerLine);
+      els.rhymeLine1.innerHTML = highlight.html1;
+      els.rhymeLine2.innerHTML = highlight.html2;
+      els.rhymeComparison.classList.remove('hidden');
+    } else {
+      els.rhymeComparison.classList.add('hidden');
+    }
 
     // Details
     els.resultSyllables.textContent = result.rhyme.details.syllableMatches;

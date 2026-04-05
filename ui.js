@@ -43,6 +43,8 @@
     resultFeedback: document.getElementById('result-feedback'),
     resultSyllables: document.getElementById('result-syllables'),
     resultType: document.getElementById('result-type'),
+    resultInternal: document.getElementById('result-internal'),
+    resultInternalRow: document.getElementById('result-internal-row'),
     resultWordplay: document.getElementById('result-wordplay'),
     resultWordplayRow: document.getElementById('result-wordplay-row'),
     resultNatural: document.getElementById('result-natural'),
@@ -214,7 +216,10 @@
     els.resultFeedback.textContent = result.feedback;
 
     // Rhyme Highlights
-    if (roundResult.playerLine && result.rhyme.details.syllableMatches > 0) {
+    const hasEndRhyme = result.rhyme.details.syllableMatches > 0;
+    const hasInternal = (result.rhyme.details.internalCross || []).length > 0 ||
+                        (result.rhyme.details.internalWithin || []).length > 0;
+    if (roundResult.playerLine && (hasEndRhyme || hasInternal)) {
       const highlight = RhymeEngine.highlightRhyme(challenge.line, roundResult.playerLine);
       els.rhymeLine1.innerHTML = highlight.html1;
       els.rhymeLine2.innerHTML = highlight.html2;
@@ -226,6 +231,22 @@
     // Details
     els.resultSyllables.textContent = result.rhyme.details.syllableMatches;
     els.resultType.textContent = formatRhymeType(result.rhyme.details.type);
+
+    // Internal rhyme bonus
+    const internalBonus = result.rhyme.details.internalBonus || 0;
+    if (internalBonus > 0) {
+      const crossCount = (result.rhyme.details.internalCross || []).length;
+      const withinCount = (result.rhyme.details.internalWithin || []).length;
+      let label = `+${internalBonus}`;
+      const parts = [];
+      if (crossCount > 0) parts.push(`${crossCount} Binnen`);
+      if (withinCount > 0) parts.push(`${withinCount} intern`);
+      if (parts.length) label += ` (${parts.join(', ')})`;
+      els.resultInternal.textContent = label;
+      els.resultInternalRow.classList.remove('hidden');
+    } else {
+      els.resultInternalRow.classList.add('hidden');
+    }
 
     // Wordplay
     if (result.wordplayBonus > 0) {

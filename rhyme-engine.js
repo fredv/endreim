@@ -321,7 +321,76 @@ const RhymeEngine = (() => {
   }
 
   /**
+   * Findet Binnenreime (interne Reime) zwischen zwei Zeilen.
+   * Vergleicht jede Silbe aus line1 mit jeder aus line2 und findet Matches
+   * an beliebigen Positionen (Anfang, Mitte, Ende).
+   * endRhymeIndices: Set von Silben-Index-Paaren die bereits als Endreim erkannt wurden.
+   */
+  function findInternalRhymes(syl1, syl2, endRhymeIndices1, endRhymeIndices2) {
+    const internalMatches = [];
+    const THRESHOLD = 0.5; // Höherer Threshold für interne Reime (weniger false positives)
+
+    for (let i = 0; i < syl1.length; i++) {
+      if (endRhymeIndices1.has(i)) continue; // Bereits als Endreim erkannt
+      for (let j = 0; j < syl2.length; j++) {
+        if (endRhymeIndices2.has(j)) continue;
+        const score = compareSyllables(syl1[i], syl2[j]);
+        if (score >= THRESHOLD) {
+          internalMatches.push({
+            idx1: i, idx2: j,
+            syl1: syl1[i], syl2: syl2[j],
+            score
+          });
+        }
+      }
+    }
+
+    // Greedy-Matching: jede Silbe darf nur einmal zugeordnet werden
+    internalMatches.sort((a, b) => b.score - a.score);
+    const used1 = new Set();
+    const used2 = new Set();
+    const filtered = [];
+    for (const m of internalMatches) {
+      if (used1.has(m.idx1) || used2.has(m.idx2)) continue;
+      used1.add(m.idx1);
+      used2.add(m.idx2);
+      filtered.push(m);
+    }
+    return filtered;
+  }
+
+  /**
+   * Findet Binnenreime innerhalb einer einzelnen Zeile.
+   */
+  function findWithinLineRhymes(syllables) {
+    const matches = [];
+    const THRESHOLD = 0.6; // Noch höher für innerhalb einer Zeile
+
+    for (let i = 0; i < syllables.length; i++) {
+      for (let j = i + 2; j < syllables.length; j++) { // Mindestens 2 Silben Abstand
+        const score = compareSyllables(syllables[i], syllables[j]);
+        if (score >= THRESHOLD) {
+          matches.push({ idx1: i, idx2: j, score });
+        }
+      }
+    }
+
+    // Greedy-Matching
+    matches.sort((a, b) => b.score - a.score);
+    const used = new Set();
+    const filtered = [];
+    for (const m of matches) {
+      if (used.has(m.idx1) || used.has(m.idx2)) continue;
+      used.add(m.idx1);
+      used.add(m.idx2);
+      filtered.push(m);
+    }
+    return filtered;
+  }
+
+  /**
    * Bewertet den Reim zwischen zwei Zeilen.
+   * Analysiert Endreime, Binnenreime (zwischen den Zeilen) und interne Reime (innerhalb einer Zeile).
    * Gibt ein Ergebnis-Objekt zurück mit Score und Details.
    */
   function evaluateRhyme(line1, line2) {
@@ -335,15 +404,19 @@ const RhymeEngine = (() => {
       return { score: 0, details: { syllableMatches: 0, type: 'none' } };
     }
 
-    // Vergleiche Silben von hinten nach vorne (Reimschema)
+    // === 1. Endreime (von hinten nach vorne) ===
     const maxCompare = Math.min(syl1.length, syl2.length);
     let totalMatch = 0;
     let matchCount = 0;
     const syllableScores = [];
+    const endRhymeIndices1 = new Set();
+    const endRhymeIndices2 = new Set();
 
     for (let i = 0; i < maxCompare; i++) {
-      const s1 = syl1[syl1.length - 1 - i];
-      const s2 = syl2[syl2.length - 1 - i];
+      const idx1 = syl1.length - 1 - i;
+      const idx2 = syl2.length - 1 - i;
+      const s1 = syl1[idx1];
+      const s2 = syl2[idx2];
       const score = compareSyllables(s1, s2);
 
       syllableScores.push({
@@ -353,27 +426,20 @@ const RhymeEngine = (() => {
       });
 
       if (score >= 0.3) {
-        // Gewichtung: erste reimende Silbe (von hinten) zählt am meisten
         const weight = 1 / (i + 1);
         totalMatch += score * weight;
         matchCount++;
+        endRhymeIndices1.add(idx1);
+        endRhymeIndices2.add(idx2);
       } else if (i > 0) {
-        // Wenn eine Silbe nicht reimt, breche ab (Reim muss zusammenhängend sein)
         break;
       } else {
-        // Letzte Silbe reimt nicht → kein Reim
-        return {
-          score: 0,
-          details: {
-            syllableMatches: 0,
-            type: 'none',
-            syllableScores
-          }
-        };
+        // Letzte Silbe reimt nicht – trotzdem weiter prüfen für Binnenreime
+        break;
       }
     }
 
-    // Reimtyp bestimmen
+    // Reimtyp bestimmen (Endreim)
     let type = 'none';
     const lastSylScore = syllableScores[0]?.score || 0;
 
@@ -383,19 +449,25 @@ const RhymeEngine = (() => {
     else if (matchCount === 2) type = 'double_dirty';
     else if (lastSylScore >= 0.85) type = 'single_clean';
     else if (lastSylScore >= 0.5) type = 'single_dirty';
-    else type = 'weak';
+    else if (matchCount > 0) type = 'weak';
 
-    // Basis-Score berechnen
+    // === 2. Binnenreime (zwischen den Zeilen, nicht am Ende) ===
+    const internalCross = findInternalRhymes(syl1, syl2, endRhymeIndices1, endRhymeIndices2);
+
+    // === 3. Interne Reime (innerhalb der Spielerzeile) ===
+    const internalWithin = findWithinLineRhymes(syl2);
+
+    // === Scoring ===
     const baseScore = totalMatch;
-
-    // Bonus für mehr reimende Silben
     const syllableBonus = Math.max(0, (matchCount - 1) * 15);
-
-    // Qualitätsbonus für saubere Reime
     const cleanBonus = lastSylScore >= 0.85 ? 10 : lastSylScore >= 0.7 ? 5 : 0;
 
-    // Gesamtpunktzahl
-    const rawScore = (baseScore * 40) + syllableBonus + cleanBonus;
+    // Binnenreim-Bonus: 8 Punkte pro Cross-Line Match, 5 pro Within-Line Match
+    const internalCrossBonus = Math.min(20, internalCross.length * 8);
+    const internalWithinBonus = Math.min(10, internalWithin.length * 5);
+    const internalBonus = internalCrossBonus + internalWithinBonus;
+
+    const rawScore = (baseScore * 40) + syllableBonus + cleanBonus + internalBonus;
     const finalScore = Math.round(Math.min(100, rawScore));
 
     return {
@@ -407,6 +479,9 @@ const RhymeEngine = (() => {
         baseScore: Math.round(baseScore * 100) / 100,
         syllableBonus,
         cleanBonus,
+        internalCross,
+        internalWithin,
+        internalBonus,
       }
     };
   }
@@ -513,27 +588,43 @@ const RhymeEngine = (() => {
   function generateFeedback(rhyme, wordplayBonus, naturalnessMalus, totalScore) {
     const type = rhyme.details.type;
     const syllables = rhyme.details.syllableMatches;
+    const internalCross = rhyme.details.internalCross || [];
+    const internalWithin = rhyme.details.internalWithin || [];
+    const internalBonus = rhyme.details.internalBonus || 0;
 
-    if (totalScore === 0) return 'Das reimt sich leider gar nicht. Versuch es nochmal!';
-    if (totalScore < 20) return 'Ein schwacher Reim... Da geht noch mehr!';
+    if (totalScore === 0 && internalCross.length === 0) return 'Das reimt sich leider gar nicht. Versuch es nochmal!';
 
     let fb = '';
 
-    if (type.startsWith('multisyllabic')) {
-      fb = `🔥 ${syllables}-Silben-Reim! `;
-      if (type.includes('clean')) fb += 'Und dazu noch sauber!';
-      else fb += 'Nicht ganz sauber, aber respektabel!';
-    } else if (type.startsWith('double')) {
-      fb = `💪 Doppelreim! `;
-      if (type.includes('clean')) fb += 'Sauber getroffen!';
-      else fb += 'Leicht unsauber, aber solide.';
-    } else if (type.startsWith('single')) {
-      fb = `👍 Einfacher Reim. `;
-      if (type.includes('clean')) fb += 'Sauber!';
-      else fb += 'Geht so.';
+    if (totalScore > 0 && type !== 'none') {
+      if (type.startsWith('multisyllabic')) {
+        fb = `🔥 ${syllables}-Silben-Reim! `;
+        if (type.includes('clean')) fb += 'Und dazu noch sauber!';
+        else fb += 'Nicht ganz sauber, aber respektabel!';
+      } else if (type.startsWith('double')) {
+        fb = `💪 Doppelreim! `;
+        if (type.includes('clean')) fb += 'Sauber getroffen!';
+        else fb += 'Leicht unsauber, aber solide.';
+      } else if (type.startsWith('single')) {
+        fb = `👍 Einfacher Reim. `;
+        if (type.includes('clean')) fb += 'Sauber!';
+        else fb += 'Geht so.';
+      } else {
+        fb = 'Schwacher Reim. ';
+      }
+    } else if (internalCross.length > 0) {
+      fb = 'Kein Endreim, aber ';
     } else {
-      fb = 'Schwacher Reim.';
+      fb = 'Ein schwacher Reim... Da geht noch mehr!';
     }
+
+    if (internalCross.length > 0) {
+      fb += ` 🔗 ${internalCross.length} Binnenreim${internalCross.length > 1 ? 'e' : ''} erkannt!`;
+    }
+    if (internalWithin.length > 0) {
+      fb += ` 🎯 ${internalWithin.length} interner Reim${internalWithin.length > 1 ? 'e' : ''} in deiner Zeile!`;
+    }
+    if (internalBonus > 0) fb += ` +${internalBonus}`;
 
     if (wordplayBonus > 0) fb += ` ✨ Wortspiel-Bonus: +${wordplayBonus}!`;
     if (naturalnessMalus > 0) fb += ` ⚠️ Wirkt etwas erzwungen: -${naturalnessMalus}`;
@@ -554,37 +645,76 @@ const RhymeEngine = (() => {
       return { html1: escapeHtmlEngine(line1), html2: escapeHtmlEngine(line2), syllableScores: [] };
     }
 
-    // Vergleiche Silben von hinten und sammle Highlight-Infos
-    const maxCompare = Math.min(syl1.length, syl2.length);
-    const highlights1 = []; // { startPos, endPos, quality }
+    const highlights1 = [];
     const highlights2 = [];
     const syllableScores = [];
+    const endRhymeIndices1 = new Set();
+    const endRhymeIndices2 = new Set();
 
+    // === 1. Endreime (von hinten) ===
+    const maxCompare = Math.min(syl1.length, syl2.length);
     for (let i = 0; i < maxCompare; i++) {
-      const s1 = syl1[syl1.length - 1 - i];
-      const s2 = syl2[syl2.length - 1 - i];
+      const idx1 = syl1.length - 1 - i;
+      const idx2 = syl2.length - 1 - i;
+      const s1 = syl1[idx1];
+      const s2 = syl2[idx2];
       const score = compareSyllables(s1, s2);
 
-      if (score < 0.3) {
-        if (i === 0) break; // Kein Reim
-        break; // Reim-Kette unterbrochen
-      }
+      if (score < 0.3) break;
 
       const quality = score >= 0.85 ? 'perfect' : score >= 0.7 ? 'good' : score >= 0.5 ? 'dirty' : 'weak';
-
-      highlights1.push({ startPos: s1.startPos, endPos: s1.endPos, quality, score });
-      highlights2.push({ startPos: s2.startPos, endPos: s2.endPos, quality, score });
+      highlights1.push({ startPos: s1.startPos, endPos: s1.endPos, quality, score, type: 'end' });
+      highlights2.push({ startPos: s2.startPos, endPos: s2.endPos, quality, score, type: 'end' });
       syllableScores.push({ syl1: s1.text, syl2: s2.text, score, quality });
+      endRhymeIndices1.add(idx1);
+      endRhymeIndices2.add(idx2);
     }
 
-    // Sortiere nach Position (aufsteigend)
-    highlights1.sort((a, b) => a.startPos - b.startPos);
-    highlights2.sort((a, b) => a.startPos - b.startPos);
+    // === 2. Binnenreime (zwischen den Zeilen) ===
+    const internalCross = findInternalRhymes(syl1, syl2, endRhymeIndices1, endRhymeIndices2);
+    for (const m of internalCross) {
+      const quality = m.score >= 0.85 ? 'perfect' : m.score >= 0.7 ? 'good' : 'dirty';
+      highlights1.push({ startPos: m.syl1.startPos, endPos: m.syl1.endPos, quality, score: m.score, type: 'internal' });
+      highlights2.push({ startPos: m.syl2.startPos, endPos: m.syl2.endPos, quality, score: m.score, type: 'internal' });
+    }
 
-    const html1 = buildHighlightedHtml(line1, highlights1);
-    const html2 = buildHighlightedHtml(line2, highlights2);
+    // === 3. Interne Reime (innerhalb der Spielerzeile) ===
+    const usedInLine2 = new Set([...endRhymeIndices2, ...internalCross.map(m => m.idx2)]);
+    const internalWithin = findWithinLineRhymes(syl2);
+    for (const m of internalWithin) {
+      if (usedInLine2.has(m.idx1) || usedInLine2.has(m.idx2)) continue;
+      const quality = m.score >= 0.85 ? 'perfect' : m.score >= 0.7 ? 'good' : 'dirty';
+      highlights2.push({ startPos: syl2[m.idx1].startPos, endPos: syl2[m.idx1].endPos, quality, score: m.score, type: 'within' });
+      highlights2.push({ startPos: syl2[m.idx2].startPos, endPos: syl2[m.idx2].endPos, quality, score: m.score, type: 'within' });
+    }
 
-    return { html1, html2, syllableScores };
+    // Dedupliziere und sortiere (bei Overlap gewinnt der höhere Score)
+    const dedup1 = deduplicateHighlights(highlights1);
+    const dedup2 = deduplicateHighlights(highlights2);
+
+    const html1 = buildHighlightedHtml(line1, dedup1);
+    const html2 = buildHighlightedHtml(line2, dedup2);
+
+    return { html1, html2, syllableScores, internalCross, internalWithin };
+  }
+
+  function deduplicateHighlights(highlights) {
+    // Sortiere nach Score (höchster zuerst) um bei Überlappungen den besten zu behalten
+    const sorted = [...highlights].sort((a, b) => b.score - a.score);
+    const result = [];
+    const covered = new Set();
+
+    for (const h of sorted) {
+      let dominated = false;
+      for (let p = h.startPos; p < h.endPos; p++) {
+        if (covered.has(p)) { dominated = true; break; }
+      }
+      if (dominated) continue;
+      for (let p = h.startPos; p < h.endPos; p++) covered.add(p);
+      result.push(h);
+    }
+
+    return result.sort((a, b) => a.startPos - b.startPos);
   }
 
   function buildHighlightedHtml(text, highlights) {
@@ -594,17 +724,16 @@ const RhymeEngine = (() => {
     let pos = 0;
 
     for (const h of highlights) {
-      // Text vor dem Highlight
       if (h.startPos > pos) {
         result += escapeHtmlEngine(text.substring(pos, h.startPos));
       }
-      // Highlighted text
       const highlightedText = text.substring(h.startPos, h.endPos);
-      result += `<span class="rhyme-${h.quality}" title="Score: ${Math.round(h.score * 100)}%">${escapeHtmlEngine(highlightedText)}</span>`;
+      const typeClass = h.type === 'internal' ? ' rhyme-internal' : h.type === 'within' ? ' rhyme-within' : '';
+      const typeLabel = h.type === 'internal' ? 'Binnenreim' : h.type === 'within' ? 'Interner Reim' : 'Endreim';
+      result += `<span class="rhyme-${h.quality}${typeClass}" title="${typeLabel} – Score: ${Math.round(h.score * 100)}%">${escapeHtmlEngine(highlightedText)}</span>`;
       pos = h.endPos;
     }
 
-    // Rest des Textes
     if (pos < text.length) {
       result += escapeHtmlEngine(text.substring(pos));
     }

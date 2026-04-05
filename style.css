@@ -601,10 +601,19 @@ body {
   text-underline-offset: 3px;
 }
 
+/* Binnenreim / interner Reim: gestrichelte Unterlinie statt durchgehend */
+.rhyme-internal {
+  text-decoration-style: dashed !important;
+}
+
+.rhyme-within {
+  text-decoration-style: dotted !important;
+}
+
 /* Legende */
 .rhyme-legend {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   justify-content: center;
   margin-top: 12px;
   flex-wrap: wrap;
@@ -629,6 +638,23 @@ body {
 .legend-dot.rhyme-good { background: rgba(96, 165, 250, 0.5); }
 .legend-dot.rhyme-dirty { background: rgba(251, 146, 60, 0.5); }
 .legend-dot.rhyme-weak { background: rgba(250, 204, 21, 0.4); }
+
+.legend-separator {
+  color: var(--border);
+  font-size: 0.8rem;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-bottom: 2px solid var(--text-dim);
+  vertical-align: middle;
+}
+
+.legend-line.legend-solid { border-bottom-style: solid; }
+.legend-line.legend-dashed { border-bottom-style: dashed; }
+.legend-line.legend-dotted { border-bottom-style: dotted; }
 
 .result-details {
   text-align: left;
